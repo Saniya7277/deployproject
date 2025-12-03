@@ -165,7 +165,7 @@ def upload_choice(patient_id):
 
 # ========== SEIZURE UPLOAD WITH STRICT VALIDATION ==========
 # Load your precomputed dataset features
-dataset_features = np.load(r"C:\Users\saniy\Downloads\EEG seizure and non-seizure image dataset\features.npy", allow_pickle=True)
+dataset_features = np.load(os.path.join("data", "features.npy"), allow_pickle=True)
 
 @app.route('/eeg/upload_seizure/<int:patient_id>', methods=['GET'])
 def upload_seizure_page(patient_id):
@@ -2182,3 +2182,4 @@ with app.app_context():
 if __name__ == '__main__':
 
     app.run(debug=True)
+
