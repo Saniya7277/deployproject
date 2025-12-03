@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Upload Seizure EEG{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow border-0 rounded-3">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+      <i class="fas fa-bolt"></i> Upload EEG for Seizure Detection - {{ patient.name }}
+    </div>
+
+    <div class="card-body">
+      <div class="alert alert-warning">
+        <strong>⚡ Seizure Detection Requirements:</strong>
+        <ul class="mb-0">
+          <li>Only <strong>PNG, JPG, JPEG</strong> image files</li>
+          <li>Must be valid EEG spectrogram with vertical frequency bands</li>
+          <li>Blue-green-yellow gradient pattern preferred</li>
+          <li>Maximum file size: 32 MB</li>
+        </ul>
+      </div>
+
+      <div id="uploadAlert" style="display:none;"></div>
+
+      <form id="uploadForm" method="POST" enctype="multipart/form-data" novalidate>
+        <div class="mb-3">
+          <label for="file" class="form-label">
+            <i class="fas fa-folder-open"></i> Choose Seizure Spectrogram
+          </label>
+          <input type="file" class="form-control form-control-lg" id="file" name="file"
+                 accept=".png,.jpg,.jpeg" required>
+          <div class="form-text mt-2">
+            <small class="text-danger">⚠️ ULTRA-STRICT validation - only genuine EEG spectrograms accepted!</small>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{{ url_for('upload_choice', patient_id=patient.id) }}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+          <button id="uploadBtn" type="submit" class="btn btn-warning btn-lg shadow-sm">
+            <i class="fas fa-upload me-1"></i> Upload & Validate
+          </button>
+        </div>
+      </form>
+
+      <div id="loadingOverlay" style="display:none; margin-top: 20px;">
+        <div class="text-center p-4 bg-light rounded">
+          <div class="spinner-border text-warning mb-3" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 id="loadingText">🔍 Validating spectrogram...</h5>
+          <p class="text-muted mb-0" id="loadingSubtext">Checking frequency patterns</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Beep Sound -->
+<audio id="errorBeep" preload="auto">
+  <source src="{{ url_for('static', filename='sounds/error-170796.mp3') }}">
+</audio>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('uploadForm');
+  const fileInput = document.getElementById('file');
+  const btn = document.getElementById('uploadBtn');
+  const alertBox = document.getElementById('uploadAlert');
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  const loadingSubtext = document.getElementById('loadingSubtext');
+  const beep = document.getElementById('errorBeep');
+
+  function showAlert(type, message) {
+    alertBox.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            <strong>${type === 'danger' ? '❌ Error:' : '✅ Success:'}</strong> ${message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                          </div>`;
+    alertBox.style.display = 'block';
+    
+    // Scroll to alert
+    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function playBeep() {
+    try { 
+      beep.currentTime = 0; 
+      beep.play().catch(e => console.log('Audio not available')); 
+    } catch(e) {
+      console.log('Beep error:', e);
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertBox.style.display = 'none';
+
+    const f = fileInput.files[0];
+    if (!f) {
+      showAlert('danger', 'No file selected.');
+      playBeep();
+      return;
+    }
+
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['png', 'jpg', 'jpeg'].includes(ext)) {
+      showAlert('danger', 'Only PNG, JPG, JPEG files allowed for seizure detection!');
+      playBeep();
+      return;
+    }
+
+    if (f.size > 32 * 1024 * 1024) {
+      showAlert('danger', 'File too large! Maximum 32 MB allowed.');
+      playBeep();
+      return;
+    }
+
+    btn.disabled = true;
+    overlay.style.display = 'block';
+
+    const stages = [
+      { text: '🔍 Reading image...', sub: 'Loading file' },
+      { text: '🔬 Checking frequency bands...', sub: 'Analyzing vertical patterns' },
+      { text: '✅ Validating EEG structure...', sub: 'Verifying spectrogram format' }
+    ];
+    
+    let stage = 0;
+    const stageInterval = setInterval(() => {
+      if (stage < stages.length) {
+        loadingText.textContent = stages[stage].text;
+        loadingSubtext.textContent = stages[stage].sub;
+        stage++;
+      }
+    }, 800);
+
+    const fd = new FormData();
+    fd.append("file", f);
+
+    try {
+      const resp = await fetch(window.location.href, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: fd
+      });
+
+      clearInterval(stageInterval);
+
+      if (!resp.ok) {
+        throw new Error(`Server error: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      overlay.style.display = 'none';
+      btn.disabled = false;
+
+      if (!data.success) {
+        // REJECTED - Show error + beep
+        showAlert("danger", data.message);
+        playBeep();
+        console.log('Validation failed:', data.message);
+        return;
+      }
+
+      // ACCEPTED - Show success
+      loadingText.textContent = '✅ Valid spectrogram!';
+      showAlert("success", data.message);
+
+      setTimeout(() => {
+        window.location.href = `/seizure/preview/${data.eeg_id}`;
+      }, 1000);
+
+    } catch (e) {
+      clearInterval(stageInterval);
+      overlay.style.display = 'none';
+      btn.disabled = false;
+      showAlert('danger', 'Upload failed: ' + e.message);
+      playBeep();
+      console.error('Upload error:', e);
+    }
+  });
+});
+</script>
+
+<style>
+.btn { transition: 0.2s; border-radius: 8px; }
+.btn:hover { transform: scale(1.05); }
+#loadingOverlay { animation: fadeIn 0.3s ease-in; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+{% endblock %}

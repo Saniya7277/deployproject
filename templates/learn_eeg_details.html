@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}📘 Detailed EEG Interpretation{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">📘 Detailed EEG Interpretation</h2>
+
+    <div class="alert alert-dark" style="white-space: pre-line; font-family: monospace;">
+        {{ detailed_explanation }}
+    </div>
+</div>
+{% endblock %}

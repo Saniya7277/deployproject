@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% block title %}Preview & Predict - Seizure Detection{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4 text-center">
+    <i class="fas fa-bolt text-warning"></i> Seizure Detection - Preview & Predict
+  </h2>
+
+  <div class="row">
+    <!-- Preview Card -->
+    <div class="col-md-6">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-warning text-dark">
+          <i class="fas fa-image"></i> Uploaded Spectrogram
+        </div>
+        <div class="card-body text-center">
+          <!-- FIXED: Display actual uploaded image -->
+          <img src="{{ url_for('serve_uploaded_file', filename=eeg_record.filename) }}" 
+               class="img-fluid rounded shadow"
+               alt="EEG Spectrogram"
+               style="max-height: 450px; max-width: 100%; cursor: zoom-in; border: 2px solid #ddd;"
+               onclick="openZoomModal(this.src)">
+          
+          <div class="mt-4 text-start">
+            <p class="mb-2"><strong><i class="fas fa-file"></i> Filename:</strong> {{ eeg_record.filename }}</p>
+            <p class="mb-2"><strong><i class="fas fa-clock"></i> Uploaded:</strong> {{ eeg_record.upload_date.strftime('%Y-%m-%d %H:%M') }}</p>
+            <p class="mb-0"><strong><i class="fas fa-user"></i> Patient:</strong> {{ patient.name }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predict Card -->
+    <div class="col-md-6">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-warning text-dark">
+          <i class="fas fa-brain"></i> Run Seizure Detection
+        </div>
+        <div class="card-body">
+          <h5 class="mb-3">Ready to analyze this spectrogram?</h5>
+          <p class="text-muted">
+            Our rule-based system will analyze the spectrogram using frequency analysis and pattern detection to identify seizure patterns.
+          </p>
+
+          <div class="alert alert-info">
+            <strong>📊 Analysis Information:</strong>
+            <ul class="mb-0">
+              <li>Method: Frequency & Pattern Analysis</li>
+              <li>Input: EEG Spectrogram Image</li>
+              <li>Output: Binary (Seizure/No Seizure)</li>
+              <li>Processing time: ~5-10 seconds</li>
+            </ul>
+          </div>
+
+          <button class="btn btn-warning btn-lg w-100 mb-3" 
+                  id="predictBtn"
+                  onclick="runPrediction()">
+            <i class="fas fa-magic"></i> Analyze for Seizure
+          </button>
+
+          <a href="{{ url_for('patient_detail', id=patient.id) }}" 
+             class="btn btn-secondary w-100">
+            <i class="fas fa-arrow-left"></i> Back to Patient
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction Modal -->
+<div class="modal fade" id="predictionModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-brain"></i> Running Analysis
+        </h5>
+      </div>
+      <div class="modal-body text-center py-5">
+        <div class="spinner-border text-warning mb-3" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="analysisText">🧠 Analyzing EEG spectrogram...</h5>
+        <p class="text-muted" id="analysisSubtext">Processing frequency patterns</p>
+        <div class="progress mt-3" style="height: 20px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+               id="analysisProgress" style="width: 0%">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" id="resultHeader">
+        <h5 class="modal-title">
+          <i class="fas fa-chart-bar"></i> Seizure Detection Result
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <h2 id="resultLabel" class="mb-2"></h2>
+          <div id="resultBadge" class="d-inline-block mb-3"></div>
+          <h4 id="resultConfidence"></h4>
+        </div>
+        <canvas id="resultChart" style="max-height: 300px;"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a id="viewDetailsBtn" href="#" class="btn btn-warning">
+          <i class="fas fa-file-alt"></i> View Full Report
+        </a>
+        <a id="downloadReportBtn" href="#" class="btn btn-danger">
+          <i class="fas fa-download"></i> Download PDF
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Zoom Modal -->
+<div class="modal fade" id="zoomModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Spectrogram View</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="zoomImage" class="img-fluid" alt="Zoomed">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+function openZoomModal(src) {
+  document.getElementById('zoomImage').src = src;
+  new bootstrap.Modal(document.getElementById('zoomModal')).show();
+}
+
+async function runPrediction() {
+  const predictionModal = new bootstrap.Modal(document.getElementById('predictionModal'));
+  const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+  
+  predictionModal.show();
+  
+  let progress = 0;
+  const progressBar = document.getElementById('analysisProgress');
+  const progressInterval = setInterval(() => {
+    progress += 10;
+    if (progress <= 90) {
+      progressBar.style.width = progress + '%';
+      progressBar.textContent = progress + '%';
+    }
+  }, 300);
+  
+  try {
+    const formData = new FormData();
+    formData.append('eeg_id', '{{ eeg_record.id }}');
+    
+    const response = await fetch('/predict_seizure', {
+      method: 'POST',
+      body: formData
+    });
+    
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+    progressBar.textContent = '100%';
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Prediction failed');
+    }
+    
+    const result = await response.json();
+    
+    setTimeout(() => {
+      predictionModal.hide();
+      setTimeout(() => showResult(result), 500);
+    }, 1000);
+    
+  } catch (error) {
+    clearInterval(progressInterval);
+    predictionModal.hide();
+    alert('❌ Prediction failed: ' + error.message);
+  }
+}
+
+function showResult(result) {
+  const { label, confidence, analysis_id } = result;
+  
+  const header = document.getElementById('resultHeader');
+  if (label.includes('Seizure Detected')) {
+    header.className = 'modal-header bg-danger text-white';
+  } else {
+    header.className = 'modal-header bg-success text-white';
+  }
+  
+  document.getElementById('resultLabel').textContent = 'Analysis Result';
+  
+  const badge = document.getElementById('resultBadge');
+  if (label.includes('Seizure Detected')) {
+    badge.innerHTML = '<span class="badge bg-danger fs-3 px-4 py-2">⚡ Seizure Detected</span>';
+  } else {
+    badge.innerHTML = '<span class="badge bg-success fs-3 px-4 py-2">✓ No Seizure</span>';
+  }
+  
+  const confPercent = (confidence * 100).toFixed(1);
+  document.getElementById('resultConfidence').innerHTML = 
+    `<span class="badge bg-primary fs-5 px-3 py-2">Confidence: ${confPercent}%</span>`;
+  
+  const ctx = document.getElementById('resultChart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['No Seizure', 'Seizure'],
+      datasets: [{
+        label: 'Confidence',
+        data: [1 - confidence, confidence],
+        backgroundColor: [
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(255, 99, 132, 0.6)'
+        ],
+        borderColor: [
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 99, 132, 1)'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1,
+          ticks: {
+            callback: function(value) {
+              return (value * 100).toFixed(0) + '%';
+            }
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return (context.parsed.y * 100).toFixed(1) + '%';
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  document.getElementById('viewDetailsBtn').href = `/analysis/${analysis_id}`;
+  document.getElementById('downloadReportBtn').href = `/download_report/${analysis_id}`;
+  
+  new bootstrap.Modal(document.getElementById('resultModal')).show();
+  
+  document.getElementById('resultModal').addEventListener('hidden.bs.modal', () => {
+    window.location.href = '/patients/{{ patient.id }}';
+  }, { once: true });
+}
+</script>
+{% endblock %}

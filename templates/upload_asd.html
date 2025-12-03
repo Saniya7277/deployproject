@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}Upload ASD EEG{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow border-0 rounded-3">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+      <i class="fas fa-brain"></i> Upload EEG for ASD Detection - {{ patient.name }}
+    </div>
+
+    <div class="card-body">
+      <div class="alert alert-info">
+        <strong>🧠 ASD Detection Requirements:</strong>
+        <ul class="mb-0">
+          <li><strong>.csv</strong> files with EEG channels (Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2)</li>
+           
+          <li>CSV files will use ML model for analysis</li>
+          
+          <li>Maximum file size: 32 MB</li>
+        </ul>
+      </div>
+
+      <div id="uploadAlert" style="display:none;"></div>
+
+      <form id="uploadForm" method="POST" enctype="multipart/form-data" novalidate>
+        <div class="mb-3">
+          <label for="file" class="form-label">
+            <i class="fas fa-folder-open"></i> Choose ASD Spectrogram
+          </label>
+          <input type="file" class="form-control" id="file" name="file"
+                 accept=".csv" required>
+          <div class="form-text mt-2">
+            <small class="text-danger">⚠️ System validates that uploaded image is a genuine EEG spectrogram!</small>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{{ url_for('upload_choice', patient_id=patient.id) }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+          <button id="uploadBtn" type="submit" class="btn btn-info shadow-sm">
+            <i class="fas fa-upload me-1"></i> Upload & Preview
+          </button>
+        </div>
+      </form>
+
+      <div id="loadingOverlay" style="display:none; margin-top: 20px;">
+        <div class="text-center p-4 bg-light rounded">
+          <div class="spinner-border text-info mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 id="loadingText">🔍 Validating spectrogram...</h5>
+          <p class="text-muted mb-0">Checking if image is valid EEG data</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Beep Sound -->
+<audio id="errorBeep" preload="auto">
+  <source src="{{ url_for('static', filename='sounds/error-170796.mp3') }}" type="audio/mpeg">
+</audio>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('uploadForm');
+  const fileInput = document.getElementById('file');
+  const btn = document.getElementById('uploadBtn');
+  const alertBox = document.getElementById('uploadAlert');
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  const beep = document.getElementById('errorBeep');
+
+  function showAlert(type, message) {
+    alertBox.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            ${message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                          </div>`;
+    alertBox.style.display = 'block';
+  }
+
+  function playBeep() {
+    try { 
+      beep.currentTime = 0; 
+      beep.play().catch(e => console.log('Audio play failed')); 
+    } catch(e) {}
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertBox.style.display = 'none';
+
+    const f = fileInput.files[0];
+    if (!f) {
+      showAlert('danger', '❌ No file selected.');
+      playBeep();
+      return;
+    }
+
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['png', 'jpg', 'jpeg', 'csv'].includes(ext)) {
+      showAlert('danger', '❌ Only PNG, JPG, JPEG, CSV allowed!');
+      playBeep();
+      return;
+    }
+
+    btn.disabled = true;
+    overlay.style.display = 'block';
+
+    const stages = [
+      '🔍 Reading image...',
+      '🔬 Validating spectrogram...',
+      '✅ Checking EEG patterns...'
+    ];
+    
+    let stage = 0;
+    const stageInterval = setInterval(() => {
+      if (stage < stages.length) {
+        loadingText.textContent = stages[stage];
+        stage++;
+      }
+    }, 800);
+
+    const fd = new FormData();
+    fd.append("file", f);
+
+    try {
+      const resp = await fetch(window.location.href, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: fd
+      });
+
+      clearInterval(stageInterval);
+
+      const data = await resp.json();
+
+      if (!data.success) {
+        overlay.style.display = 'none';
+        btn.disabled = false;
+        showAlert("danger", data.message);
+        if (data.beep) playBeep();
+        return;
+      }
+
+      loadingText.textContent = '✅ Valid spectrogram!';
+      showAlert("success", data.message);
+
+      setTimeout(() => {
+        window.location.href = `/asd/preview/${data.eeg_id}`;
+      }, 1000);
+
+    } catch (e) {
+      clearInterval(stageInterval);
+      overlay.style.display = 'none';
+      btn.disabled = false;
+      playBeep();
+      console.error('Upload error:', e);
+    }
+  });
+});
+</script>
+
+<style>
+.btn { transition: 0.2s; border-radius: 8px; }
+.btn:hover { transform: scale(1.05); }
+#loadingOverlay { 
+  animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
+{% endblock %}

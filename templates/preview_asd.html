@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% block title %}Preview & Predict - ASD Detection{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4 text-center">
+    <i class="fas fa-brain text-info"></i> ASD Detection - Preview & Predict
+  </h2>
+
+  <div class="row">
+    <!-- Preview Card -->
+    <div class="col-md-12 mb-4">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-info text-white">
+          <i class="fas fa-table"></i> Uploaded CSV Data Preview
+        </div>
+        <div class="card-body">
+          {% if is_csv and csv_preview is not none %}
+            <div class="alert alert-success">
+              <i class="fas fa-check-circle"></i> CSV file loaded successfully!
+              <strong>{{ csv_preview|length }}</strong> rows shown (first 10 rows)
+            </div>
+            
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-sm table-bordered table-hover">
+                <thead class="table-dark sticky-top">
+                  <tr>
+                    {% for col in csv_preview.columns %}
+                    <th style="min-width: 100px;">{{ col }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for _, row in csv_preview.iterrows() %}
+                  <tr>
+                    {% for val in row %}
+                    <td>{{ "%.4f"|format(val) if val is number else val }}</td>
+                    {% endfor %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-3">
+              <p class="mb-1"><strong>Total Columns:</strong> {{ csv_preview.columns|length }}</p>
+              <p class="mb-1"><strong>File:</strong> {{ eeg_record.filename }}</p>
+              <p class="mb-1"><strong>Uploaded:</strong> {{ eeg_record.upload_date.strftime('%Y-%m-%d %H:%M') }}</p>
+              <p class="mb-0"><strong>Patient:</strong> {{ patient.name }}</p>
+            </div>
+          {% else %}
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle"></i> Unable to preview CSV data
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Predict Card -->
+    <div class="col-md-12">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-info text-white">
+          <i class="fas fa-brain"></i> Run ASD Detection with ML Model
+        </div>
+        <div class="card-body">
+          <h5 class="mb-3">Ready to analyze this CSV data?</h5>
+          <p class="text-muted">
+            Our machine learning model will extract features from the EEG data and predict whether patterns associated with Autism Spectrum Disorder are present.
+          </p>
+
+          <div class="alert alert-info">
+            <strong>🧠 ML Model Information:</strong>
+            <ul class="mb-0">
+              <li>Algorithm: Random Forest Classifier</li>
+              <li>Features: 100 features per window (statistical, entropy, band powers)</li>
+              <li>Window Size: 2 seconds with 30% overlap</li>
+              <li>Channels: Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2</li>
+              <li>Processing time: 10-30 seconds (depends on file size)</li>
+            </ul>
+          </div>
+
+          <button class="btn btn-info btn-lg w-100 mb-3" 
+                  id="predictBtn"
+                  onclick="runPrediction()">
+            <i class="fas fa-magic"></i> Predict ASD with ML Model
+          </button>
+
+          <a href="{{ url_for('patient_detail', id=patient.id) }}" 
+             class="btn btn-secondary w-100">
+            <i class="fas fa-arrow-left"></i> Back to Patient
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction Modal -->
+<div class="modal fade" id="predictionModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-brain"></i> Running ML Analysis
+        </h5>
+      </div>
+      <div class="modal-body text-center py-5">
+        <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="analysisText">🧠 Extracting features from EEG data...</h5>
+        <p class="text-muted" id="analysisSubtext">Processing windows with ML model</p>
+        <div class="progress mt-3" style="height: 20px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+               id="analysisProgress" style="width: 0%">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" id="resultHeader">
+        <h5 class="modal-title">
+          <i class="fas fa-chart-bar"></i> ML Analysis Complete
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <h2 id="resultLabel" class="mb-2"></h2>
+          <div id="resultBadge" class="d-inline-block mb-3"></div>
+          <div id="resultConfidence"></div>
+        </div>
+        <canvas id="resultChart" style="max-height: 300px;"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a id="viewDetailsBtn" href="#" class="btn btn-info">
+          <i class="fas fa-file-alt"></i> View Full Report
+        </a>
+        <a id="downloadReportBtn" href="#" class="btn btn-danger">
+          <i class="fas fa-download"></i> Download PDF
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+async function runPrediction() {
+  const predictionModal = new bootstrap.Modal(document.getElementById('predictionModal'));
+  const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+  
+  predictionModal.show();
+  
+  // Simulate progress
+  let progress = 0;
+  const progressBar = document.getElementById('analysisProgress');
+  const analysisText = document.getElementById('analysisText');
+  const analysisSubtext = document.getElementById('analysisSubtext');
+  
+  const progressInterval = setInterval(() => {
+    progress += 5;
+    if (progress <= 90) {
+      progressBar.style.width = progress + '%';
+      progressBar.textContent = progress + '%';
+      
+      // Update text based on progress
+      if (progress < 30) {
+        analysisText.textContent = '🔍 Reading CSV data...';
+        analysisSubtext.textContent = 'Loading EEG channels';
+      } else if (progress < 60) {
+        analysisText.textContent = '⚙️ Extracting features...';
+        analysisSubtext.textContent = 'Computing statistical measures and band powers';
+      } else {
+        analysisText.textContent = '🧠 Running ML model...';
+        analysisSubtext.textContent = 'Analyzing windows with Random Forest';
+      }
+    }
+  }, 300);
+  
+  try {
+    const formData = new FormData();
+    formData.append('eeg_id', '{{ eeg_record.id }}');
+    
+    const response = await fetch('/predict_asd', {
+      method: 'POST',
+      body: formData
+    });
+    
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+    progressBar.textContent = '100%';
+    analysisText.textContent = '✅ Analysis complete!';
+    analysisSubtext.textContent = 'Preparing results...';
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Prediction failed');
+    }
+    
+    const result = await response.json();
+    
+    setTimeout(() => {
+      predictionModal.hide();
+      setTimeout(() => showResult(result), 500);
+    }, 1000);
+    
+  } catch (error) {
+    clearInterval(progressInterval);
+    predictionModal.hide();
+    alert('❌ Prediction failed: ' + error.message);
+    console.error('Error:', error);
+  }
+}
+
+function showResult(result) {
+  const { label, confidence, analysis_id, asd_count, control_count, total_windows } = result;
+  
+  // Update header
+  const header = document.getElementById('resultHeader');
+  if (label.includes('ASD')) {
+    header.className = 'modal-header bg-danger text-white';
+  } else {
+    header.className = 'modal-header bg-success text-white';
+  }
+  
+  // Update result label
+  document.getElementById('resultLabel').textContent = 'ML Analysis Result';
+  
+  // Update badge
+  const badge = document.getElementById('resultBadge');
+  if (label.includes('ASD')) {
+    badge.innerHTML = '<span class="badge bg-danger fs-3 px-4 py-2">ASD Detected</span>';
+  } else {
+    badge.innerHTML = '<span class="badge bg-success fs-3 px-4 py-2">Control (No ASD)</span>';
+  }
+  
+  // Show detailed window counts
+  if (total_windows && total_windows > 1) {
+    const confPercent = (confidence * 100).toFixed(1);
+    document.getElementById('resultConfidence').innerHTML = 
+      `<div class="mb-2"><span class="badge bg-primary fs-5 px-3 py-2">Overall Confidence: ${confPercent}%</span></div>
+       <div>
+         <span class="badge bg-danger px-3 py-2">ASD Windows: ${asd_count}</span> 
+         <span class="badge bg-success px-3 py-2">Control Windows: ${control_count}</span>
+         <span class="badge bg-secondary px-3 py-2">Total Windows: ${total_windows}</span>
+       </div>`;
+  } else {
+    const confPercent = (confidence * 100).toFixed(1);
+    document.getElementById('resultConfidence').innerHTML = 
+      `<span class="badge bg-primary fs-5 px-3 py-2">Confidence: ${confPercent}%</span>`;
+  }
+  
+  // Create pie chart if multiple windows
+  const ctx = document.getElementById('resultChart');
+  
+  if (total_windows && total_windows > 1) {
+    // Pie chart for window distribution
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['ASD Windows', 'Control Windows'],
+        datasets: [{
+          data: [asd_count, control_count],
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(75, 192, 192, 0.8)'
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(75, 192, 192, 1)'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: { size: 14 },
+              padding: 15
+            }
+          },
+          title: {
+            display: true,
+            text: `ML Window Classification (${total_windows} windows analyzed)`,
+            font: { size: 16, weight: 'bold' }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const total = asd_count + control_count;
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  } else {
+    // Bar chart for simple prediction
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Control', 'ASD'],
+        datasets: [{
+          label: 'Confidence',
+          data: [1 - confidence, confidence],
+          backgroundColor: [
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 99, 132, 0.6)'
+          ],
+          borderColor: [
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 99, 132, 1)'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 1,
+            ticks: {
+              callback: function(value) {
+                return (value * 100).toFixed(0) + '%';
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return (context.parsed.y * 100).toFixed(1) + '%';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  // Update buttons
+  document.getElementById('viewDetailsBtn').href = `/analysis/${analysis_id}`;
+  document.getElementById('downloadReportBtn').href = `/download_report/${analysis_id}`;
+  
+  // Show modal
+  new bootstrap.Modal(document.getElementById('resultModal')).show();
+  
+  // Reload on close
+  document.getElementById('resultModal').addEventListener('hidden.bs.modal', () => {
+    window.location.href = '/patients/{{ patient.id }}';
+  }, { once: true });
+}
+</script>
+
+<style>
+.table-responsive {
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+}
+
+.table-bordered th {
+  background-color: #343a40;
+  color: white;
+  font-weight: 600;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+</style>
+{% endblock %}

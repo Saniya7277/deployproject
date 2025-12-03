@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-3">
+        <i class="fas fa-wave-square text-primary"></i> EEG Record Details
+    </h2>
+
+    <div class="card shadow p-3 mb-4">
+        <h5><i class="fas fa-folder-open text-primary me-2"></i> Record Information</h5>
+        <hr>
+
+        <p><strong>ID:</strong> {{ eeg_record.id }}</p>
+        <p><strong>Filename:</strong> {{ eeg_record.filename }}</p>
+        <p><strong>Uploaded:</strong> {{ eeg_record.upload_date.strftime("%Y-%m-%d %H:%M") }}</p>
+        <p><strong>Processed:</strong>
+            {% if eeg_record.processed %}
+                <span class="badge bg-success">Yes</span>
+            {% else %}
+                <span class="badge bg-secondary">Not Yet</span>
+            {% endif %}
+        </p>
+
+        <a href="{{ url_for('patient_detail', id=eeg_record.patient_id) }}" class="btn btn-secondary mt-2">
+            ⬅ Back to Patient
+        </a>
+    </div>
+
+    <!-- ANALYSES LIST -->
+    <div class="card shadow p-3">
+        <h5><i class="fas fa-brain text-primary me-2"></i>Analyses Performed</h5>
+        <hr>
+
+        {% if analyses %}
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Result</th>
+                        <th>Confidence</th>
+                        <th>Date</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for a in analyses %}
+                    <tr>
+                        <td>{{ a.id }}</td>
+                        <td>{{ a.analysis_type }}</td>
+
+                        <td>
+                            {% if a.result == "ASD Detected" %}
+                                <span class="badge bg-danger">ASD Detected</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">{{ a.result }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ (a.confidence * 100) | round(1) }}%</td>
+                        <td>{{ a.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+
+                        <td>
+                            <a href="{{ url_for('analysis_detail', id=a.id) }}"
+                               class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+        {% else %}
+            <div class="text-center py-3">
+                <p class="text-muted">No analysis performed for this record.</p>
+            </div>
+        {% endif %}
+
+        <a href="{{ url_for('create_analysis', eeg_id=eeg_record.id) }}"
+           class="btn btn-success mt-3">
+            <i class="fas fa-microscope"></i> Run New Analysis
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

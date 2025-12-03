@@ -1,0 +1,344 @@
+<!-- templates/chatbot.html -->
+<!-- Floating Chatbot (FIXED - fully responsive) -->
+
+<div id="chatbot-wrapper">
+  <!-- Toggle button -->
+  <button id="chatbot-toggle" class="chat-toggle-btn" title="Chat with EEG Assistant">
+    <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="Chatbot" class="chatbot-icon">
+  </button>
+
+  <!-- Chatbox -->
+  <div id="chatbot-box" class="chatbox card shadow-lg" aria-hidden="true">
+    <div class="chat-header text-white d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-robot me-2"></i>
+        <span>EEG Assistant</span>
+      </div>
+      <div>
+        <button id="chat-info" class="btn btn-sm btn-light me-2" title="How to use">
+          <i class="fas fa-info-circle text-primary"></i>
+        </button>
+        <button id="close-chat" class="btn-close btn-close-white" aria-label="Close"></button>
+      </div>
+    </div>
+
+    <div id="chatbot-body" class="chat-body">
+      <div class="chat-message bot">
+        👋 Hello! I'm your EEG Assistant.<br>
+        Click an option or type a question – I can help with uploads, patients, and analyses.
+      </div>
+
+      <div id="chat-options" class="chat-options mt-2">
+        <button class="option-btn" data-action="add_patient">🧑‍⚕️ Add Patient</button>
+        <button class="option-btn" data-action="patients">👥 View Patients</button>
+        <button class="option-btn" data-action="analyses">📊 View Analyses</button>
+        <button class="option-btn" data-action="help">❓ Help</button>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chatbot-input" placeholder="Type your message..." autocomplete="off" aria-label="Chat input">
+      <button id="send-btn" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <!-- Tooltip for info -->
+  <div id="chat-tooltip" class="tooltip-box" role="tooltip" aria-hidden="true">
+    💡 Quick tips: ask "upload", "add patient", "analyses", or click quick actions!
+  </div>
+</div>
+
+<style>
+  /* wrapper */
+  #chatbot-wrapper { 
+    position: fixed; 
+    bottom: 22px; 
+    right: 22px; 
+    z-index: 2000; 
+  }
+
+  /* toggle */
+  .chat-toggle-btn {
+    width: 70px; 
+    height: 70px; 
+    border-radius: 50%; 
+    border: none; 
+    background: white;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18); 
+    transition: transform .22s ease;
+    animation: pulseGlow 2.2s infinite;
+  }
+  
+  .chat-toggle-btn:hover { 
+    transform: scale(1.06) rotate(3deg); 
+  }
+  
+  @keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(76,110,245,0.36); }
+    70% { box-shadow: 0 0 0 14px rgba(76,110,245,0); }
+    100% { box-shadow: 0 0 0 0 rgba(76,110,245,0); }
+  }
+  
+  .chatbot-icon { 
+    width: 44px; 
+    height: 44px; 
+    animation: floaty 3s ease-in-out infinite; 
+  }
+  
+  @keyframes floaty { 
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-6px);} 
+  }
+
+  /* chatbox */
+  .chatbox {
+    display: none; 
+    opacity: 0; 
+    transform: translateY(8px) scale(.98);
+    width: 360px; 
+    height: 520px; 
+    border-radius: 14px; 
+    overflow: hidden;
+    position: fixed; 
+    bottom: 100px; 
+    right: 22px; 
+    background: #fff;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.18); 
+    transition: opacity .28s ease, transform .28s ease;
+  }
+  
+  .chatbox.show { 
+    display: block; 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg,#4c6ef5,#63e6be);
+    padding: 12px 14px; 
+    color: white; 
+    font-weight:600;
+  }
+
+  .chat-body { 
+    padding: 12px; 
+    height: 388px; 
+    overflow-y: auto; 
+    background: #f7fbff; 
+  }
+  
+  .chat-message { 
+    padding: 8px 12px; 
+    border-radius: 12px; 
+    margin-bottom: 10px; 
+    max-width: 84%; 
+    font-size: .95rem; 
+    word-wrap: break-word;
+  }
+  
+  .chat-message.bot { 
+    background: #eef3ff; 
+    color: #1f2d4a; 
+  }
+  
+  .chat-message.user { 
+    background: #4c6ef5; 
+    color: #fff; 
+    margin-left: auto; 
+  }
+
+  .chat-input-area { 
+    display:flex; 
+    gap:8px; 
+    padding: 10px; 
+    border-top:1px solid #eef2ff; 
+    background:#fff; 
+  }
+  
+  .chat-input-area input { 
+    flex:1; 
+    border-radius: 20px; 
+    padding: 10px 14px; 
+    border: 1px solid #e6eefc; 
+    outline:none; 
+    background:#fafcff; 
+  }
+  
+  .chat-input-area button { 
+    border: none; 
+    background: transparent; 
+    color: #4c6ef5; 
+    font-size: 1.2rem; 
+    cursor:pointer; 
+    transition: transform 0.2s;
+  }
+  
+  .chat-input-area button:hover {
+    transform: scale(1.1);
+  }
+
+  .chat-options { 
+    display:flex; 
+    flex-wrap:wrap; 
+    gap:8px; 
+    margin-top:8px; 
+  }
+  
+  .option-btn {
+    flex: 1 1 48%; 
+    padding:6px 8px; 
+    border-radius:8px; 
+    border:1px solid #dbe9ff;
+    background:#f1f8ff; 
+    color:#1d3f8b; 
+    cursor:pointer; 
+    font-size:.88rem; 
+    transition: all .18s;
+  }
+  
+  .option-btn:hover { 
+    background:#4c6ef5; 
+    color:#fff; 
+    transform:scale(1.03); 
+  }
+
+  .tooltip-box {
+    position:absolute; 
+    bottom: 94px; 
+    right: 96px; 
+    background:#222; 
+    color:#fff;
+    padding:8px 10px; 
+    border-radius:8px; 
+    font-size:.86rem; 
+    display:none; 
+    opacity:0; 
+    transition:opacity .18s;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14); 
+    max-width:240px;
+  }
+  
+  .tooltip-box.show { 
+    display:block; 
+    opacity:1; 
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🤖 Chatbot initialized');
+  
+  // DOM elements
+  const toggleBtn = document.getElementById('chatbot-toggle');
+  const chatBox = document.getElementById('chatbot-box');
+  const closeBtn = document.getElementById('close-chat');
+  const infoBtn = document.getElementById('chat-info');
+  const tooltip = document.getElementById('chat-tooltip');
+  const chatBody = document.getElementById('chatbot-body');
+  const chatInput = document.getElementById('chatbot-input');
+  const sendBtn = document.getElementById('send-btn');
+  const optionBtns = document.querySelectorAll('.option-btn');
+
+  // Helper: append message
+  function appendMessage(html, sender='bot') {
+    const el = document.createElement('div');
+    el.className = 'chat-message ' + (sender === 'user' ? 'user' : 'bot');
+    el.innerHTML = html;
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  // Toggle chat visibility
+  toggleBtn.addEventListener('click', () => {
+    console.log('Toggle clicked');
+    chatBox.classList.toggle('show');
+    chatBox.setAttribute('aria-hidden', !chatBox.classList.contains('show'));
+  });
+  
+  closeBtn.addEventListener('click', () => {
+    console.log('Close clicked');
+    chatBox.classList.remove('show');
+    chatBox.setAttribute('aria-hidden', 'true');
+  });
+
+  // Tooltip show/hide
+  infoBtn.addEventListener('mouseenter', () => tooltip.classList.add('show'));
+  infoBtn.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+
+  // Send message function
+  async function sendMessage(message = null) {
+    const text = (message || chatInput.value || '').trim();
+    if (!text) return;
+    
+    console.log('Sending:', text);
+    appendMessage(`<i class="fas fa-user-circle"></i> ${text}`, 'user');
+    chatInput.value = '';
+
+    const typingEl = document.createElement('div');
+    typingEl.className = 'chat-message bot';
+    typingEl.innerHTML = '<i class="fas fa-robot"></i> Typing...';
+    chatBody.appendChild(typingEl);
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    try {
+      const res = await fetch("{{ url_for('chat') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ message: text })
+      });
+      
+      if (typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Response:', data);
+        appendMessage(data.reply || "I couldn't understand that.", 'bot');
+        
+        // Handle navigation
+        if (data.action) {
+          appendMessage('Redirecting you now...', 'bot');
+          setTimeout(() => {
+            window.location.href = data.action;
+          }, 1500);
+        }
+      } else {
+        appendMessage("Service unavailable. Please try again.", 'bot');
+      }
+    } catch (err) {
+      console.error('Chat error:', err);
+      if (typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+      appendMessage("Network error. Please try again.", 'bot');
+    }
+  }
+
+  // Quick action buttons
+  optionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      console.log('Quick action:', action);
+      
+      if (action === 'help') {
+        sendMessage('help');
+      } else if (action === 'add_patient') {
+        sendMessage('add patient');
+      } else if (action === 'patients') {
+        sendMessage('view patients');
+      } else if (action === 'analyses') {
+        sendMessage('view analyses');
+      }
+    });
+  });
+
+  // Send button & enter key
+  sendBtn.addEventListener('click', () => sendMessage());
+  chatInput.addEventListener('keypress', e => { 
+    if (e.key === 'Enter') sendMessage(); 
+  });
+  
+  console.log('✅ Chatbot ready');
+});
+</script>
