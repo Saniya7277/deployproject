@@ -1,14 +1,17 @@
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
-Werkzeug==3.0.1
-
-# Optional: For actual deep learning implementation
-# Uncomment these when ready to integrate ML models
-# tensorflow==2.15.0
-# numpy==1.24.3
-# scipy==1.11.4
-# matplotlib==3.8.2
-# mne==1.6.1
-# pandas==2.1.4
+SQLAlchemy==2.0.44
 gunicorn
-
+numpy==2.2.6
+pandas==2.3.3
+scikit-learn==1.7.2
+matplotlib==3.10.7
+joblib==1.5.2
+python-docx==1.2.0
+PyPDF2==3.0.1
+PyMuPDF==1.26.6
+pytesseract==0.3.13
+opencv-python==4.12.0.88
+seaborn==0.13.2
+reportlab==4.4.4
+Werkzeug==3.0.1
