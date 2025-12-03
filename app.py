@@ -24,7 +24,8 @@ import imagehash
 
 
 # Load EEG perceptual hashes
-EEG_HASHES = np.load(r"C:\Users\saniy\Downloads\EEG seizure and non-seizure image dataset\hashes.npy", allow_pickle=True)
+EEG_HASHES = np.load("data/hashes.npy", allow_pickle=True)
+
 
 
 
@@ -2179,4 +2180,5 @@ with app.app_context():
     print("✅ Database initialized")
 
 if __name__ == '__main__':
+
     app.run(debug=True)
