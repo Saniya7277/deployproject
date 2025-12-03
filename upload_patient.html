@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload EEG - EEG Analysis System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow border-0 rounded-3">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #63e6be, #74c0fc);">
+      <i class="fas fa-file-upload"></i> Upload EEG for {{ patient.name }}
+    </div>
+
+    <div class="card-body">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="file" class="form-label"><i class="fas fa-folder-open"></i> Choose CSV File</label>
+          <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <button type="submit" class="btn btn-info shadow-sm">
+            <i class="fas fa-upload"></i> Upload EEG
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .btn {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+  }
+  .btn:hover {
+    transform: scale(1.05);
+  }
+</style>
+{% endblock %}

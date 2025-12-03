@@ -1,0 +1,12 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.1
+
+# Optional: For actual deep learning implementation
+# Uncomment these when ready to integrate ML models
+# tensorflow==2.15.0
+# numpy==1.24.3
+# scipy==1.11.4
+# matplotlib==3.8.2
+# mne==1.6.1
+# pandas==2.1.4

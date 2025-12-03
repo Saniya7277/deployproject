@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Analysis Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">
+    <i class="fas fa-brain text-primary"></i> Analysis Details
+  </h2>
+
+  <div class="row">
+    <!-- Left: Info Card -->
+    <div class="col-md-4">
+      <div class="card shadow-lg border-0 rounded-4 p-3">
+        <h5 class="fw-bold text-secondary">
+          <i class="fas fa-info-circle me-2"></i> Analysis Information
+        </h5>
+        <hr>
+
+        <p><strong>ID:</strong> {{ analysis.id }}</p>
+        <p><strong>🧪 Type:</strong> {{ analysis.analysis_type.replace("_", " ").title() }}</p>
+        
+        <p><strong>🏷️ Result:</strong>
+          {% if analysis.result == "ASD" %}
+            <span class="badge bg-danger px-3 py-2 fs-6">ASD Detected</span>
+          {% else %}
+            <span class="badge bg-success px-3 py-2 fs-6">{{ analysis.result }}</span>
+          {% endif %}
+        </p>
+
+        <!-- Confidence Bar -->
+        <p><strong>⚡ Confidence:</strong></p>
+        <div class="progress mb-3" style="height: 25px; border-radius: 10px;">
+          <div class="progress-bar 
+                      {% if analysis.confidence > 0.8 %}bg-success
+                      {% elif analysis.confidence > 0.6 %}bg-warning
+                      {% else %}bg-danger{% endif %}"
+               role="progressbar"
+               style="width: {{ analysis.confidence * 100 }}%; border-radius: 10px;">
+            <strong>{{ (analysis.confidence * 100) | round(1) }}%</strong>
+          </div>
+        </div>
+
+        <p><strong>📅 Date:</strong> {{ analysis.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+        <p><strong>📄 EEG Record:</strong>
+          <a href="{{ url_for('eeg_detail', id=analysis.eeg_record_id) }}">
+            EEG #{{ analysis.eeg_record_id }}
+          </a>
+        </p>
+
+        <hr>
+
+        <a href="{{ url_for('download_report', id=analysis.id) }}" 
+           class="btn btn-primary w-100 mb-2">
+          <i class="fas fa-file-download"></i> Download PDF Report
+        </a>
+
+        <a href="{{ url_for('analyses') }}" class="btn btn-secondary w-100">
+          ⬅️ Back to Analyses
+        </a>
+      </div>
+    </div>
+
+    <!-- Right: Histogram & Details -->
+    <div class="col-md-8">
+      <!-- Histogram Card -->
+      <!-- Visual Analysis (Heatmap for Seizure, ROC Curve for ASD) -->
+<!-- Visual Analysis (Heatmap for Seizure, ROC Curve for ASD) -->
+<!-- Visual Analysis (Heatmap for Seizure, ROC Curve for ASD) -->
+<div class="card shadow-lg border-0 rounded-4 p-3 mb-4">
+  <h5 class="fw-bold text-secondary">
+    <i class="fas fa-chart-line me-2"></i> 
+    {% if 'seizure' in analysis.analysis_type.lower() %}
+      Seizure Detection Heatmap
+    {% elif 'asd' in analysis.analysis_type.lower() %}
+      ASD Detection ROC Curve
+    {% else %}
+      Visual Analysis
+    {% endif %}
+  </h5>
+  <hr>
+
+  {% if analysis.histogram_path %}
+    <div class="text-center">
+      {% if '/' in analysis.histogram_path %}
+        {% set filename = analysis.histogram_path.split('/')[-1] %}
+      {% else %}
+        {% set filename = analysis.histogram_path.split('\\')[-1] %}
+      {% endif %}
+      
+      <img src="{{ url_for('serve_uploaded_file', filename=filename) }}"
+           class="img-fluid rounded shadow"
+           alt="Analysis Visualization"
+           style="max-width: 100%; max-height: 450px; height: auto; object-fit: contain;"
+           onclick="openImageModal(this.src)"
+           onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23999%22%3EImage not available%3C/text%3E%3C/svg%3E';">
+      
+      <p class="mt-3 text-muted small">
+        {% if 'seizure' in analysis.analysis_type.lower() %}
+          <i class="fas fa-info-circle"></i> 3-Panel Heatmap: Original | Activation | Overlay
+        {% elif 'asd' in analysis.analysis_type.lower() %}
+          <i class="fas fa-info-circle"></i> ROC Curve with AUC score and window distribution
+        {% endif %}
+      </p>
+    </div>
+  {% else %}
+    <div class="text-center py-4">
+      <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+      <p class="mt-2 text-muted">Visualization not generated for this analysis</p>
+    </div>
+  {% endif %}
+</div>
+
+
+      <!-- Details Card -->
+      <div class="card shadow-lg border-0 rounded-4 p-3">
+        <h5 class="fw-bold text-secondary">
+          <i class="fas fa-file-alt me-2"></i> Analysis Report
+        </h5>
+        <hr>
+        <p>{{ analysis.details }}</p>
+
+        <div class="alert alert-info mt-3">
+          <strong>ℹ️ Interpretation:</strong>
+          {% if analysis.result == "ASD" %}
+            The ML model detected patterns consistent with Autism Spectrum Disorder with 
+            {{ (analysis.confidence * 100) | round(1) }}% confidence.
+          {% else %}
+            The ML model classified this as {{ analysis.result }} with 
+            {{ (analysis.confidence * 100) | round(1) }}% confidence.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Zoom Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Histogram View</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" class="img-fluid" alt="Histogram">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openImageModal(src) {
+  document.getElementById('modalImage').src = src;
+  new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+</script>
+{% endblock %}

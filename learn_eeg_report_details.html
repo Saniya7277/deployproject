@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Detailed Report Analysis | Brain Spectrogram{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="text-center mb-4">📖 Detailed Report Analysis</h2>
+
+    {% if report_summary %}
+    <div class="section-card">
+        <h3>📋 Summary</h3>
+        <div class="divider"></div>
+        <p>{{ report_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if report_images %}
+    <div class="section-card">
+        <h3>🖼 Report Images / Charts</h3>
+        <div class="divider"></div>
+        {% for img in report_images %}
+            <img src="{{ img }}" class="img-fluid mb-3" style="max-width: 500px; border-radius:10px;">
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if detailed_points %}
+    <div class="section-card">
+        <h3>🔍 Detailed Explanation</h3>
+        <div class="divider"></div>
+        <ul>
+            {% for point in detailed_points %}
+                <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('learn_eeg') }}" class="btn btn-custom">⬅ Back to Upload</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Run EEG Analysis - EEG Analysis System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="card shadow border-0 rounded-3">
+    <div class="card-header text-white py-3"
+         style="background: linear-gradient(135deg, #4dabf7, #15aabf); border-radius: 12px 12px 0 0;">
+      <h5 class="mb-0">
+        <i class="fas fa-brain me-2"></i>
+        Run Analysis for EEG #{{ eeg_record.id }}
+      </h5>
+    </div>
+
+    <div class="card-body p-4">
+
+      <!-- FORM START -->
+      <form method="POST">
+
+        <!-- Analysis type -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-primary">
+            <i class="fas fa-cogs me-1"></i> Select Analysis Type
+          </label>
+
+          <select name="analysis_type" class="form-select shadow-sm" required>
+            <option value="" disabled selected>Select one...</option>
+            <option value="asd_detection">🧠 ASD Detection</option>
+            <option value="stimulus_classification">👁️ Visual Stimulus Classification</option>
+          </select>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-flex justify-content-end mt-4">
+          <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm"
+                  style="border-radius: 10px; font-weight: 600;">
+            <i class="fas fa-magic me-1"></i> Run Analysis
+          </button>
+        </div>
+
+      </form>
+      <!-- FORM END -->
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .card {
+    border-radius: 12px;
+  }
+  .btn {
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    transform: scale(1.06);
+  }
+  select.form-select {
+    border-radius: 10px !important;
+  }
+</style>
+
+{% endblock %}

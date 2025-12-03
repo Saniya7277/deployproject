@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Choose Detection Type{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <h2 class="text-center mb-4">
+        <i class="fas fa-upload text-primary"></i> Upload
+      </h2>
+      <p class="text-center text-muted mb-5">
+        Select the type of analysis you want to perform for <strong>{{ patient.name }}</strong>
+      </p>
+
+      <div class="row">
+        <!-- SEIZURE DETECTION -->
+        <div class="col-md-6 mb-4">
+          <div class="card shadow-lg border-0 h-100 hover-card">
+            <div class="card-body text-center p-5">
+              <div class="icon-wrapper mb-4">
+                <i class="fas fa-bolt fa-4x text-warning"></i>
+              </div>
+              <h3 class="card-title mb-3">Seizure Detection</h3>
+              <p class="card-text text-muted mb-4">
+                Upload EEG spectrogram to detect seizure patterns using our trained CNN model.
+              </p>
+              <a href="{{ url_for('upload_seizure', patient_id=patient.id) }}" 
+                 class="btn btn-warning btn-lg w-100">
+                <i class="fas fa-upload"></i> Upload for Seizure Detection
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ASD DETECTION -->
+        <div class="col-md-6 mb-4">
+          <div class="card shadow-lg border-0 h-100 hover-card">
+            <div class="card-body text-center p-5">
+              <div class="icon-wrapper mb-4">
+                <i class="fas fa-brain fa-4x text-info"></i>
+              </div>
+              <h3 class="card-title mb-3">Autism (ASD) Detection</h3>
+              <p class="card-text text-muted mb-4">
+                Upload EEG spectrogram to detect Autism Spectrum Disorder patterns.
+              </p>
+              <a href="{{ url_for('upload_asd', patient_id=patient.id) }}" 
+                 class="btn btn-info btn-lg w-100">
+                <i class="fas fa-upload"></i> Upload for ASD Detection
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-4">
+        <a href="{{ url_for('patient_detail', id=patient.id) }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> Back to Patient Details
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.hover-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hover-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.2) !important;
+}
+.icon-wrapper {
+  padding: 20px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 50%;
+  display: inline-block;
+}
+</style>
+{% endblock %}

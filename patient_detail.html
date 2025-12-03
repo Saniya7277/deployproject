@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Patient Details - EEG System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Patient Information Card -->
+  <div class="card shadow-lg mb-4 border-0">
+    <div class="card-header bg-gradient text-white">
+      <h3 class="mb-0"><i class="fas fa-user-circle"></i> Patient Information</h3>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-2"><strong><i class="fas fa-id-badge text-primary"></i> ID:</strong> {{ patient.id }}</p>
+          <p class="mb-2"><strong><i class="fas fa-user text-primary"></i> Name:</strong> {{ patient.name }}</p>
+          <p class="mb-2"><strong><i class="fas fa-birthday-cake text-primary"></i> Age:</strong> {{ patient.age }} years</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-2"><strong><i class="fas fa-venus-mars text-primary"></i> Gender:</strong> {{ patient.gender }}</p>
+          <p class="mb-2"><strong><i class="fas fa-stethoscope text-primary"></i> Diagnosis:</strong> 
+            {% if patient.diagnosis %}
+              <span class="badge bg-info">{{ patient.diagnosis }}</span>
+            {% else %}
+              <span class="badge bg-secondary">Not specified</span>
+            {% endif %}
+          </p>
+          <p class="mb-2"><strong><i class="fas fa-calendar text-primary"></i> Registered:</strong> {{ patient.created_at.strftime('%Y-%m-%d') }}</p>
+        </div>
+      </div>
+      
+      <div class="mt-3 d-flex gap-2">
+        <a href="{{ url_for('upload_choice', patient_id=patient.id) }}" class="btn btn-success">
+          <i class="fas fa-file-upload"></i> Upload EEG
+        </a>
+        <a href="{{ url_for('update_patient', id=patient.id) }}" class="btn btn-warning">
+          <i class="fas fa-edit"></i> Edit Patient
+        </a>
+        <a href="{{ url_for('delete_patient', id=patient.id) }}" class="btn btn-danger"
+           onclick="return confirm('Delete this patient and all records?');">
+          <i class="fas fa-trash"></i> Delete Patient
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- EEG Records Card -->
+  <div class="card shadow-lg border-0">
+    <div class="card-header bg-gradient text-white">
+      <h4 class="mb-0"><i class="fas fa-brain"></i> EEG Records ({{ eeg_records|length }})</h4>
+    </div>
+    <div class="card-body">
+      {% if eeg_records %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Filename</th>
+              <th>Type</th>
+              <th>Uploaded</th>
+              <th>Status</th>
+              <th>Analysis Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in eeg_records %}
+            <tr>
+              <td><strong>{{ record.id }}</strong></td>
+              <td>
+                <i class="fas fa-file-medical text-primary"></i>
+                {{ record.filename[:30] }}{% if record.filename|length > 30 %}...{% endif %}
+              </td>
+              <td>
+                {% if 'seizure' in record.filename.lower() %}
+                  <span class="badge bg-warning">Seizure</span>
+                {% elif 'asd' in record.filename.lower() %}
+                  <span class="badge bg-info">ASD</span>
+                {% else %}
+                  <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+              </td>
+              <td>{{ record.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td>
+                {% if record.status == 'completed' %}
+                  <span class="badge bg-success">
+                    <i class="fas fa-check-circle"></i> Completed
+                  </span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">
+                    <i class="fas fa-clock"></i> Uploaded
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if record.analyses %}
+                  <span class="badge bg-primary">{{ record.analyses|length }} Analysis</span>
+                {% else %}
+                  <span class="badge bg-secondary">None</span>
+                {% endif %}
+              </td>
+              <td>
+                <!-- FIXED: Only View button, redirects to analysis detail if exists -->
+                {% if record.analyses and record.analyses|length > 0 %}
+                  <a href="{{ url_for('analysis_detail', id=record.analyses[0].id) }}" 
+                     class="btn btn-sm btn-success" title="View Analysis Report">
+                    <i class="fas fa-eye"></i> View Report
+                  </a>
+                {% else %}
+                  <a href="{{ url_for('eeg_detail', id=record.id) }}" 
+                     class="btn btn-sm btn-primary" title="View EEG Details">
+                    <i class="fas fa-eye"></i> View Details
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+        <h5>No EEG records uploaded yet</h5>
+        <p class="text-muted">Upload your first EEG file to begin analysis</p>
+        <a href="{{ url_for('upload_choice', patient_id=patient.id) }}" class="btn btn-success">
+          <i class="fas fa-file-upload"></i> Upload EEG
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.bg-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.table-hover tbody tr:hover {
+  background-color: #f0f8ff;
+  transition: 0.2s;
+}
+</style>
+{% endblock %}

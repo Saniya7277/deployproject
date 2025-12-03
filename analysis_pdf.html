@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis Report - Brain Spectrogram</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; margin: 30px; color: #222; }
+    h1 { color: #2b5876; text-align: center; }
+    h2 { color: #3a7bd5; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    .section { margin-bottom: 25px; }
+    .label { font-weight: bold; color: #333; }
+    .confidence { width: 100%; background: #eee; border-radius: 5px; overflow: hidden; height: 18px; }
+    .bar { height: 100%; background: linear-gradient(90deg, #43cea2, #185a9d); text-align: center; color: white; font-size: 12px; line-height: 18px; }
+  </style>
+</head>
+<body>
+  <h1>EEG Analysis Report</h1>
+
+  <div class="section">
+    <h2>General Information</h2>
+    <p><span class="label">Analysis ID:</span> {{ analysis.id }}</p>
+    <p><span class="label">Patient:</span> {{ analysis.eeg_record.patient.name }}</p>
+    <p><span class="label">Type:</span> {{ analysis.analysis_type|capitalize }}</p>
+    <p><span class="label">Date:</span> {{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+  </div>
+
+  <div class="section">
+    <h2>Results</h2>
+    <p><span class="label">Result:</span> {{ analysis.result }}</p>
+    <p><span class="label">Confidence:</span></p>
+    <div class="confidence">
+      <div class="bar" style="width: {{ analysis.confidence * 100 }}%;">
+        {{ (analysis.confidence * 100)|round(1) }}%
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Details</h2>
+    <p>{{ analysis.details }}</p>
+  </div>
+
+  {% if analysis.spectrogram_path %}
+  <div class="section">
+    <h2>EEG Spectrogram</h2>
+    <img src="{{ analysis.spectrogram_path }}" alt="Spectrogram" style="max-width: 100%; border-radius: 5px;">
+  </div>
+  {% endif %}
+</body>
+</html>
